@@ -34,9 +34,6 @@ Any questions or comments, please don’t hesitate to contact with me any time.
   - supp_TableS7_TableS8_TableS9_FigureS5.R: results of Table S.7-S.9 and Fig.S.5 in the Supplementary Materials;
   - supp_TableS10.R: results of Table S.10 in the Supplementary Materials.
 
-- **`example.R`**
-  an example code
-
 ## Requirements
 
 First of all, make sure you have installed the R language environment (it is recommended to use R version 4.1 or higher).
