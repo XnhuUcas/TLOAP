@@ -2,9 +2,24 @@
 
 This repository is the implementation of "*Model aggregation-assisted transfer learning framework for generalized semiparametric models*". This repository provides a multi-source transfer learning procedure for prediction via frequentist model averaging under generalized partially linear varying-coefficient models. 
 
+## Maintainer
+
+Xiaonan Hu (<xiaonanhu@cnu.edu.cn>)
+
 Any questions or comments, please don’t hesitate to contact with me any time.
 
 **File Structure:**
+
+- **`auxiliary_codes`**
+  - ART.R: main code for the ART algorithm;
+  - Data_Gen.R: code for simulated data generation;
+  - Data_Gen_Sen.R: code for noise data generation;
+  - Performance_Eva.R: code for all evaluation indicators;
+  - translasso_func.R: all codes for the implementation of Trans-Lasso algorithm.
+
+- **`dataset`**
+  - diabetes.csv: the Pima Indians Diabetes dataset available at \url{https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database/data};
+  - train.csv: the loan approval dataset from the “Playground Series-Season 4, Episode 10” competition publicly available at \url{https://www.kaggle.com/competitions/playground-series-s4e10/data}.
 
 - **`paper_codes`**  
   codes for reproduction of all numerical results in our paper:
@@ -19,32 +34,61 @@ Any questions or comments, please don’t hesitate to contact with me any time.
   - supp_TableS7_TableS8_TableS9_FigureS5.R: results of Table S.7-S.9 and Fig.S.5 in the Supplementary Materials;
   - supp_TableS10.R: results of Table S.10 in the Supplementary Materials.
 
-- **`simdata.gen.R`**
+- **`example.R`**
+  an example code
+
 - **`pred.tloap.R`**
-- **`example.R`**  
+  an example code
+  
+- **`simdata.gen.R`**
+  an example code
 
+## Usage
 
-## Requirements
+This is a simple example which shows users how to use the provided
+functions to estimate weights and make predictions.
 
-First of all, make sure you have installed the R language environment (it is recommended to use R version 4.1 or higher).
+First, we generate simulation datasets (M=3) under the corrected target
+model and homogeneous dimension settings.
 
-In R, run the following command to install the required packages:
+``` r
+library(matrans)
 
-```r
-install.packages(c("glasso", "Matrix", "igraph"))
+## generate simulation datasets (M=3)
+size <- c(150, 200, 200, 150)
+coeff0 <- cbind(
+  as.matrix(c(1.4, -1.2, 1, -0.8, 0.65, 0.3)),
+  as.matrix(c(1.4, -1.2, 1, -0.8, 0.65, 0.3) + 0.02),
+  as.matrix(c(1.4, -1.2, 1, -0.8, 0.65, 0.3) + 0.3),
+  as.matrix(c(1.4, -1.2, 1, -0.8, 0.65, 0.3))
+)
+px <- 6
+err.sigma <- 0.5
+rho <- 0.5
+size.test <- 500
+
+whole.data <- simdata.gen(
+  px = px, num.source = 4, size = size, coeff0 = coeff0, coeff.mis = as.matrix(c(coeff0[, 2], 1.8)),
+  err.sigma = err.sigma, rho = rho, size.test = size.test, sim.set = "homo", tar.spec = "cor",
+  if.heter = FALSE
+)
+data.train <- whole.data$data.train
+data.test <- whole.data$data.test
 ```
 
-## Data Generation
+Then, we apply the functions to implement weights estimation and
+out-of-sample predictions.
 
-## Training
+``` r
+## optimal weights estimation
+bs.para <- list(bs.df = rep(3, 3), bs.degree = rep(3, 3))
+data.train$data.x[[2]] <- data.train$data.x[[2]][, -7]
+fit.transsmap <- trans.smap(train.data = data.train, nfold = 5, bs.para = bs.para)
+ma.weights <- fit.transsmap$weight.est
+time.transsmap <- fit.transsmap$time.transsmap
 
-To train the model in the paper, run the entire **`pred.tloap.R`** script. 
-
-## Evaluation
-
-To evaluate my model, run:
-
-```eval
-
+## out-of-sample prediction results
+pred.res <- pred.transsmap(object = fit.transsmap, newdata = data.test, bs.para = bs.para)
+pred.val <- pred.res$predict.val
 ```
 
