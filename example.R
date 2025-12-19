@@ -2,13 +2,6 @@ rm(list=ls())
 gc()
 source("Data_Gen.R")
 source("Performance_Eva.R")
-library(Matrix)
-library(MASS)
-library(glmnet)
-library(Rsolnp)
-library(caret)
-library(ncvreg)
-library(splines)
 
 eq=function(w){sum(w)-1}
 
@@ -25,13 +18,10 @@ obj_logit = function(w){
   return(alpha2-alpha1)
 }
 
-###### fixed dim, 6 sources 
 p <- 7
 s.cnt <- 7
 qz <- rep(2,s.cnt)
 size <- rep(100, s.cnt)
-
-# parameter setting
 para.true <- cbind(as.matrix(c(0.5,0.2,-0.2,-0.3,0.5)),
                    as.matrix(c(0.5,0.2,-0.2,-0.3,0.5)+0.02),
                    as.matrix(c(0.5,0.2,-0.2,-0.3,0.5)+0.02), 
@@ -88,7 +78,6 @@ data.all <- Data_Gen(family = family.opt,
                      mis.source.index = mis.source.index)
 data.train <- data.all$train_data
 data.test <- data.all$test_data
-
 
 ###### TLOAP-CV10
 bsz.tar.te=array(0,dim=c(size.test,ndf*qz[1]))
@@ -149,39 +138,4 @@ weight.est <- solve.weight$par
 beta.est.train <- beta.est.train.mat%*%weight.est
 para.all <- c(gvcm.res[[1]]$coefficients[1:(ndf*qz[1]+1)], beta.est.train)
 res.summary.cv10 <- Performance_Eva(train.data = data.train, test.data = data.test,  beta.est.train = beta.est.train, para.all = para.all, family = family.opt)
-
-
-
-## TLOAP-JCV
-theta_hat <- array(0,dim=c(size[1],s.cnt))
-for(nf in 1:size[1]){
-  train.data.cv <- data.train
-  train.data.cv$data.merge[[1]] <- train.data.cv$data.merge[[1]][-nf,]
-  est.beta.cv <- matrix(NA, nrow=s.cnt, ncol=p-qz[1])
-  glm.tr <- vector(mode='list', length=s.cnt)
-  for(j in 1:s.cnt){
-    dataglm <- as.data.frame(train.data.cv$data.merge[[j]]); colnames(dataglm) <- c('respon',paste('z',1:(ndf*qz[j]),sep = ''),paste('x',1:(p-qz[j]),sep = ''))
-    glm.tr[[j]] <- glm(respon~., data = dataglm, family=family.opt, control=list(maxit=1000))$coefficients
-    est.beta.cv[j,] <- glm.tr[[j]][(ndf*qz[j]+2):length(glm.tr[[j]])]
-  }
-  for(j in 1:s.cnt){
-    beta.est.train.mat.cv <- as.matrix(c(glm.tr[[1]][1], glm.tr[[1]][2:(ndf*qz[j]+1)], est.beta.cv[j,]))
-    theta_hat[nf,j] <-tar.cv[nf,]%*%beta.est.train.mat.cv
-  }
-}
-solve.weightjcv=try(solnp(rep(1/s.cnt,s.cnt), fun = obj_logit, eqfun=eq, eqB=0, LB=rep(0,s.cnt), control=list(trace=0)),silent=TRUE)
-if ('try-error' %in% class(solve.weightjcv)){
-  brea_errorjcv=brea_errorjcv+1
-  next
-}else{
-  if(solve.weightjcv$convergence!=0){
-    brea_convejcv=brea_convejcv+1
-    next
-  } 
-}
-weight.estjcv <- solve.weightjcv$par
-beta.est.trainjcv <- beta.est.train.mat%*%weight.estjcv
-para.all.majcv <- c(gvcm.res[[1]]$coefficients[1:(ndf*qz[1]+1)], beta.est.trainjcv)
-res.summary.jcv <- Performance_Eva(train.data = data.train, test.data = data.test,  beta.est.train = beta.est.trainjcv, para.all = para.all.majcv, family = family.opt)
-
 
